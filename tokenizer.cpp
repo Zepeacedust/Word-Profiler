@@ -19,11 +19,14 @@ bool is_ignored(char c) {
 
 Tokenizer::Tokenizer(const std::string& filename) {
     file = std::ifstream(filename);
+    if (file.bad()) {
+        std::printf("File bad");
+    }
 };
 
 std::string Tokenizer::next_token() {
     std::string word;
-    while (is_ignored(ch)) {
+    while (is_ignored(ch) && !empty) {
         next_char();
     }
     

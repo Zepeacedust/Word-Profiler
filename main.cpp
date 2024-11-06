@@ -40,7 +40,7 @@ void shuffle(vector<t>& shuffled) {
 
 int main() {
     WordMapper word_mapper = WordMapper();
-    Tokenizer tokenizer = Tokenizer("The Fellowship Of The Ring.txt");
+    Tokenizer tokenizer = Tokenizer("corpuses/short_fellow.txt");
     std::vector<int> frequencies = std::vector<int>();
     std::vector<std::vector<int>> neighbors;
     
@@ -77,7 +77,7 @@ int main() {
 
     int vocab = word_mapper.size();
     
-    Embedder test(word_mapper.size(), vector<int>({50, vocab}));
+    Embedder test(word_mapper.size(), vector<int>({vocab, 50, vocab}));
 
     for (size_t epoch = 0; epoch < 25; epoch++)
     {
@@ -104,10 +104,7 @@ int main() {
                 else {
                     input[bags[ind][i]] = 1;
                 } 
-
             }
-            
-
             loss += test.train(input, expected, .1);
         }
         std ::cout << std::endl;

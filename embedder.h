@@ -3,7 +3,7 @@
 using std::vector;
 
 class Embedder {
-    vector<int> classifier_layers;
+    vector<int> network_layout;
     int vocab;
 public:
     vector<vector<double>> int_values;
