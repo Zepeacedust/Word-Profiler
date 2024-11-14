@@ -5,9 +5,10 @@ using std::vector;
 class Embedder {
     vector<int> classifier_layers;
     int vocab;
-    int embed_size;
 public:
+    int embed_size;
     vector<vector<double>> int_values;
+    vector<vector<double>> biases;
     vector<vector<double>> mappings;
     vector<vector<vector<double>>> classifier;
     Embedder(int _embed_size, int _vocab, vector<int> classifier_layers);

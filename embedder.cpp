@@ -51,7 +51,16 @@ Embedder::Embedder(int _embed_size, int _vocab, vector<int> classifier_layers) {
         }
         classifier.push_back(layer);
     }
-
+    
+    for (size_t layer = 0; layer < classifier_layers.size(); layer++)
+    {
+        biases.push_back(vector<double>());
+        for (size_t node_id = 0; node_id < classifier_layers[layer]; node_id++)
+        {
+            biases[layer].push_back(random(-1,1));
+        }
+        
+    }
 
     for (size_t layer = 0; layer < classifier_layers.size(); layer++)
     {
@@ -72,7 +81,7 @@ Embedder::~Embedder() {
 vector<double> Embedder::predict(int a, int b) {
     for (size_t node_id = 0; node_id < classifier_layers[0]; node_id++)
     {
-        double acc = 0;
+        double acc = biases[0][node_id];
         for (size_t downstream = 0; downstream < embed_size; downstream++)
         {
             acc += sig(mappings[a][downstream]) * classifier[0][node_id][downstream];
@@ -85,7 +94,7 @@ vector<double> Embedder::predict(int a, int b) {
     {
         for (size_t node_id = 0; node_id < classifier_layers[layer]; node_id++)
         {
-            double acc = 0;
+            double acc = biases[layer][node_id];
             for (size_t downstream = 0; downstream < classifier_layers[layer-1]; downstream++)
             {
                 acc += int_values[layer-1][downstream] * classifier[layer][node_id][downstream];
@@ -113,6 +122,7 @@ double Embedder::train(int a, int b, vector<double> expected, double rate) {
     for (size_t node_id = 0; node_id < classifier_layers[classifier_layers.size()-1]; node_id++)
     {
         errors.push_back((output[node_id] - expected[node_id]) * output[node_id] * (1 - output[node_id]));
+        biases[biases.size()-1][node_id] -= errors[node_id] * rate;
     }    
     
 
@@ -133,6 +143,7 @@ double Embedder::train(int a, int b, vector<double> expected, double rate) {
                       -(int_values[layer][node_id])
                     * errors[upstream] * rate;
             }
+            biases[layer][node_id] -= acc * rate;
             new_errors.push_back(acc);
         }
         errors = new_errors;
@@ -163,8 +174,8 @@ double Embedder::train(int a, int b, vector<double> expected, double rate) {
             classifier[0][node_id][upstream] += -rate * mappings[a][upstream] * errors[node_id];
             classifier[0][node_id][upstream+embed_size] += -rate * mappings[b][upstream] * errors[node_id];
         }
-        mappings[a][upstream] -= a_error;
-        mappings[b][upstream] -= b_error;
+        mappings[a][upstream] -= rate * a_error;
+        mappings[b][upstream] -= rate * b_error;
     }
     
     

@@ -5,12 +5,16 @@ bool is_ignored(char c) {
     switch (c) {
     case ' ':
     case '\n':
+    case '\r':
     case '\t':
     case ',':
     case '.':
     case ';':
     case ':':
     case '?':
+    case '!':
+    case '(':
+    case ')':
         return true;
     default: 
         return false;
