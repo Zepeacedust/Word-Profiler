@@ -11,7 +11,7 @@
 
 #include <random>
 
-#define CONTEXT_LENGTH 2
+#define CONTEXT_LENGTH 5
 #define NEG_SAMPLES 3
 
 bool includes(int a, const std::vector<int>& list) {
@@ -95,7 +95,7 @@ double cos_sim(std::vector<double>& a,std::vector<double>& b ) {
 
 int main() {
     WordMapper word_mapper = WordMapper();
-    Tokenizer tokenizer = Tokenizer("corpuses/select_sonnets.txt");
+    Tokenizer tokenizer = Tokenizer("corpuses/sonnets.txt");
     std::vector<int> tokenized;
     std::vector<int> frequencies = std::vector<int>();
     std::vector<std::vector<int>> neighbors;
@@ -140,7 +140,7 @@ int main() {
     //     std::cout << frequencies[i] << " \t " << word_mapper.get_word(i) << std::endl;
     // }
 
-    Embedder embedder(25, word_mapper.size());
+    Embedder embedder(50, word_mapper.size());
 
     
     int vocab = word_mapper.size();
@@ -155,15 +155,15 @@ int main() {
             if (i%((tokenized.size()-CONTEXT_LENGTH * 2)/100) == 0) {
                 std::cout << "#" << std::flush;
             }
-            vector<double> context_vec(vocab);
-            vector<double> expected_vec(vocab);
+            Eigen::VectorXd context_vec(vocab);
+            Eigen::VectorXd expected_vec(vocab);
             for (size_t j = 1; j <= CONTEXT_LENGTH; j++)
             {
                 context_vec[tokenized[i-j]] = 1;
                 context_vec[tokenized[i+j]] = 1;
             }
             expected_vec[tokenized[i]] = 1;
-            total_loss += embedder.train(context_vec, expected_vec, 0.0001);
+            total_loss += embedder.train(context_vec, expected_vec, 0.1);
         }
         std::cout << std::endl;
         std::cout << "Average loss: " << total_loss / (tokenized.size()-2*CONTEXT_LENGTH) << std::endl;
@@ -192,12 +192,12 @@ int main() {
             continue;
         }
 
-        vector<double> input(vocab);
+        Eigen::VectorXd input(vocab);
         input[ind_1] = 1;
         input[ind_2] = 1;
         input[ind_4] = 1;
         input[ind_5] = 1;
-        vector<double> out = embedder.predict(input);
+        Eigen::VectorXd out = embedder.predict(input);
 
         for (size_t i = 0; i < out.size(); i++)
         {

@@ -1,19 +1,22 @@
 #include <vector>
 #include <string>
+#include <eigen3/Eigen/Eigen>
+
+
 using std::vector;
 
 class Embedder {
     int vocab;
 public:
     int embed_size;
-    vector<vector<double>> proj_mat;
-    vector<vector<double>> dec_mat;
-    vector<double> hidden_layer;
+    Eigen::MatrixXd proj_mat;
+    Eigen::MatrixXd dec_mat;
+    Eigen::VectorXd hidden_layer;
     Embedder(int _embed_size, int _vocab);
     Embedder(const std::string& filename);
     ~Embedder();
-    vector<double> predict(vector<double> input);
-    double train(vector<double> input, vector<double> expected,double rate);
+    Eigen::VectorXd predict(Eigen::VectorXd input);
+    double train(Eigen::VectorXd input, Eigen::VectorXd expected, double rate);
     void batch();
     void serialize(const std::string& filename);
 
