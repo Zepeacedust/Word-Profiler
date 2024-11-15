@@ -62,7 +62,19 @@ Embedder::~Embedder() {
 
 Eigen::VectorXd Embedder::predict(Eigen::VectorXd input) {
     //hidden_layer = input * proj_mat;
-    hidden_layer = proj_mat * input;    
+    hidden_layer = proj_mat * input;
+    double max = abs(hidden_layer[0]);
+    for (size_t i = 0; i < hidden_layer.size(); i++)
+    {
+        if (hidden_layer[i] != hidden_layer[i]) {
+            printf("Nan in hidden layer");
+        }
+        if (max < abs(hidden_layer[i])) {
+            max = abs(hidden_layer[i]);
+        }
+    }
+    hidden_layer /= max;
+    
     //output = hidden_layer * dec_mat;
     Eigen::VectorXd output = dec_mat * hidden_layer;
     return softmax(output);
@@ -91,8 +103,8 @@ double Embedder::train(Eigen::VectorXd input, Eigen::VectorXd expected, double r
 
 
     Eigen::VectorXd da2 = output - expected;
-    Eigen::MatrixXd dw2 = (hidden_layer * da2.transpose()).transpose();
-    Eigen::VectorXd da1 = (dec_mat.transpose() * da2).transpose();
+    Eigen::MatrixXd dw2 = da2 * hidden_layer.transpose();
+    Eigen::VectorXd da1 = (da2.transpose() * dec_mat);
     Eigen::MatrixXd dw1 = da1 * output.transpose();
     proj_mat -= rate * dw1;
     dec_mat -= rate * dw2;

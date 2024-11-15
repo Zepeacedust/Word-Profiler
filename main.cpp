@@ -95,7 +95,7 @@ double cos_sim(std::vector<double>& a,std::vector<double>& b ) {
 
 int main() {
     WordMapper word_mapper = WordMapper();
-    Tokenizer tokenizer = Tokenizer("corpuses/sonnets.txt");
+    Tokenizer tokenizer = Tokenizer("corpuses/short_fellow.txt");
     std::vector<int> tokenized;
     std::vector<int> frequencies = std::vector<int>();
     std::vector<std::vector<int>> neighbors;
@@ -157,6 +157,12 @@ int main() {
             }
             Eigen::VectorXd context_vec(vocab);
             Eigen::VectorXd expected_vec(vocab);
+            for (size_t ind = 0; ind < vocab; ind++)
+            {
+                expected_vec[ind] = 0;
+                context_vec[ind] = 0;
+            }
+            
             for (size_t j = 1; j <= CONTEXT_LENGTH; j++)
             {
                 context_vec[tokenized[i-j]] = 1;
@@ -193,6 +199,11 @@ int main() {
         }
 
         Eigen::VectorXd input(vocab);
+        for (size_t i = 0; i < vocab; i++)
+        {
+            input[i] = vocab;
+        }
+        
         input[ind_1] = 1;
         input[ind_2] = 1;
         input[ind_4] = 1;
