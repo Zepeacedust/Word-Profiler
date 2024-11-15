@@ -26,8 +26,8 @@ Tokenizer::Tokenizer(const std::string& filename) {
 };
 
 std::string Tokenizer::next_token() {
-    std::string word;
-    while (is_ignored(ch)) {
+    std::string word = "";
+    while (is_ignored(ch) && !empty) {
         next_char();
     }
     

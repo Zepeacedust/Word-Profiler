@@ -15,209 +15,170 @@ double random(double min, double max) {
     return (double)std::rand()/(double)RAND_MAX*(max-min) + min;
 }
 
-Embedder::Embedder(int _embed_size, int _vocab, vector<int> classifier_layers) {
+vector<double> softmax(vector<double> input) {
+    double total = 0;
+    // filter for too large values
 
+    double max = input[0];
+    for (size_t i = 0; i < input.size(); i++)
+    {
+        if (input[i] > max)
+        {
+            max = input[i];
+        }
+        
+    }
+    
+
+    for (size_t i = 0; i < input.size(); i++)
+    {
+        total += std::exp(input[i]-max);
+    }
+    vector<double> out(input.size());
+    for (size_t i = 0; i < input.size(); i++)
+    {
+        out[i] = exp(input[i]-max)/total;
+        if (out[i] != out[i]) {
+            printf("Nan in softmax");
+        }
+    }
+    return out;
+}
+
+Embedder::Embedder(int _embed_size, int _vocab) {
     embed_size = _embed_size;
     vocab = _vocab;
-    this->classifier_layers = classifier_layers;
-
-    for (size_t i = 0; i < vocab; i++)
+    for (size_t x = 0; x < embed_size; x++)
     {
-        vector<double> embedding;
-        for (size_t x = 0; x < embed_size; x++)
+        vector<double> line(vocab);
+        for (size_t y = 0; y < vocab; y++)
         {
-            embedding.push_back(random(-1,1));
+            line[y] = random(-1,1);
         }
-        mappings.push_back(embedding);
+        proj_mat.push_back(line);
     }
 
-    for (size_t layer_nr = 0; layer_nr < classifier_layers.size(); layer_nr++)
+    for (size_t x = 0; x < vocab; x++)
     {
-        vector<vector<double>> layer;
-        for (size_t node_id = 0; node_id < classifier_layers[layer_nr]; node_id++)
+        vector<double> line(embed_size);
+        for (size_t y = 0; y < embed_size; y++)
         {
-            vector<double> node;
-            int lower_layer;
-            if (layer_nr == 0) {
-                lower_layer = 2 * embed_size;
-            } else {
-                lower_layer = classifier_layers[layer_nr-1];
-            }
-            for (size_t downstream = 0; downstream < lower_layer; downstream++)
-            {
-                node.push_back(random(-1,1));
-            }
-            layer.push_back(node);
+            line[y] = random(-1,1);
         }
-        classifier.push_back(layer);
+        dec_mat.push_back(line);
     }
-    
-    for (size_t layer = 0; layer < classifier_layers.size(); layer++)
-    {
-        biases.push_back(vector<double>());
-        for (size_t node_id = 0; node_id < classifier_layers[layer]; node_id++)
-        {
-            biases[layer].push_back(random(-1,1));
-        }
-        
-    }
-
-    for (size_t layer = 0; layer < classifier_layers.size(); layer++)
-    {
-        int_values.push_back(vector<double>());
-        for (size_t node_id = 0; node_id < classifier_layers[layer]; node_id++)
-        {
-            int_values[layer].push_back(0);
-        }
-        
-    }
-    
 }
 
 Embedder::~Embedder() {
 
 }
 
-vector<double> Embedder::predict(int a, int b) {
-    for (size_t node_id = 0; node_id < classifier_layers[0]; node_id++)
+vector<double> Embedder::predict(vector<double> input) {
+    //hidden_layer = input * proj_mat;
+    hidden_layer = vector<double>(embed_size);
+    for (size_t in_node = 0; in_node < vocab; in_node++)
     {
-        double acc = biases[0][node_id];
-        for (size_t downstream = 0; downstream < embed_size; downstream++)
-        {
-            acc += sig(mappings[a][downstream]) * classifier[0][node_id][downstream];
-            acc += sig(mappings[b][downstream]) * classifier[0][node_id][downstream+embed_size];
+        if (input[in_node] == 0) {
+            continue;
         }
-        int_values[0][node_id] = sig(acc);
-    }
-    // hidden layers
-    for (size_t layer = 1; layer < classifier_layers.size(); layer++)
-    {
-        for (size_t node_id = 0; node_id < classifier_layers[layer]; node_id++)
+        for (size_t node  = 0; node  < embed_size; node ++)
         {
-            double acc = biases[layer][node_id];
-            for (size_t downstream = 0; downstream < classifier_layers[layer-1]; downstream++)
-            {
-                acc += int_values[layer-1][downstream] * classifier[layer][node_id][downstream];
+            hidden_layer[node] += proj_mat[node][in_node];
+            if (hidden_layer[node] != hidden_layer[node]) {
+               printf("Nan in hidden layer");
             }
-            int_values[layer][node_id] = sig(acc);
         }
     }
-    return int_values[classifier_layers.size()-1];
+    
+    //output = hidden_layer * dec_mat;
+    vector<double> output(vocab);
+    for (size_t hidden_node = 0; hidden_node < embed_size; hidden_node++)
+    {
+        for (size_t out_node = 0; out_node < vocab; out_node++)
+        {
+            output[out_node] += hidden_layer[hidden_node] * dec_mat[out_node][hidden_node];
+            if (output[out_node] != output[out_node]) {
+               printf("Nan in output");
+            }
+        }    
+    }
+    return softmax(output);
 }
 
-double Embedder::train(int a, int b, vector<double> expected, double rate) {
-    
-    vector<double> output = predict(a, b);
+double Embedder::train(vector<double> input, vector<double> expected, double rate) {
+    vector<double> output = predict(input);
 
-    double error = 0;
+    // error per output node
+    double sum_1 = 0;
+    vector<double> total_error(expected.size());
+    int count_1s = 0;
     for (size_t i = 0; i < expected.size(); i++)
     {
-        error += (output[i] - expected[i]) * (output[i] - expected[i]);
+        count_1s += 1;        
     }
-    
-
-    vector<double> errors;
-
-    // slightly different formula for first layer
-    for (size_t node_id = 0; node_id < classifier_layers[classifier_layers.size()-1]; node_id++)
+    for (size_t i = 0; i < output.size(); i++)
     {
-        errors.push_back((output[node_id] - expected[node_id]) * output[node_id] * (1 - output[node_id]));
-        biases[biases.size()-1][node_id] -= errors[node_id] * rate;
-    }    
-    
-
-    for (int layer = classifier_layers.size() - 2; layer >= 0; layer--)
-    {
-        vector<double> new_errors;
-        for (size_t node_id = 0; node_id < classifier_layers[layer]; node_id++)
-        {
-            double acc = 0;
-            for (size_t upstream = 0; upstream < classifier_layers[layer+1]; upstream++)
-            {
-                acc += 
-                      (int_values[layer][node_id])
-                    * (1-int_values[layer][node_id]) 
-                    * classifier[layer][upstream][node_id] 
-                    * errors[upstream];
-                classifier[layer+1][upstream][node_id] += 
-                      -(int_values[layer][node_id])
-                    * errors[upstream] * rate;
-            }
-            biases[layer][node_id] -= acc * rate;
-            new_errors.push_back(acc);
+        if (expected[i] == 1){
+            total_error[i]= (output[i]-1) + ( (count_1s -1) * output[i]);
+        } else {
+            total_error[i]= (count_1s * output[i]);
         }
-        errors = new_errors;
     }
 
-    
-
-    for (size_t upstream = 0; upstream < embed_size; upstream++)
+    // Loss calculation
+    double loss = 0;
+    double sum_exp = 0;
+    for (size_t i = 0; i < output.size(); i++)
     {
-        double a_error = 0;
-        double b_error = 0;
-        for (size_t node_id = 0; node_id < classifier_layers[0]; node_id++)
-        {
-            a_error += 
-                  (sig(mappings[a][upstream]))
-                * (1-sig(mappings[a][upstream])) 
-                * classifier[0][node_id][upstream] 
-                * errors[node_id];
-
-            b_error += 
-                  (sig(mappings[b][upstream]))
-                * (1-sig(mappings[b][upstream])) 
-                * classifier[0][node_id][upstream+embed_size] 
-                * errors[node_id];
-            if (b_error != b_error || a_error != a_error) {
-                b_error = 2*b_error;
-            }
-            classifier[0][node_id][upstream] += -rate * mappings[a][upstream] * errors[node_id];
-            classifier[0][node_id][upstream+embed_size] += -rate * mappings[b][upstream] * errors[node_id];
+        if (expected[i] == 1) {
+            loss -= output[i];
         }
-        mappings[a][upstream] -= rate * a_error;
-        mappings[b][upstream] -= rate * b_error;
+    }
+
+    for (size_t i = 0; i < output.size(); i++)
+    {
+        sum_exp += std::exp(output[i]);
+        if (sum_exp != sum_exp) {
+            printf("Nan Exp");
+        }
+    }
+    sum_exp = std::log(sum_exp);
+    loss += sum_exp * sum_1;
+    
+    if (loss != loss) {
+        printf("Nan Loss");
+    }
+
+    // propagate errors
+    vector<double> hidden_errors(embed_size);
+    for (size_t hidden_node = 0; hidden_node < embed_size; hidden_node++)
+    {
+        for (size_t output_node = 0; output_node < vocab; output_node++)
+        {
+            hidden_errors[hidden_node] += expected[output_node] * total_error[output_node] * dec_mat[output_node][hidden_node]; 
+        }
     }
     
+    //adjust weights
+    for (size_t hidden_node = 0; hidden_node < embed_size; hidden_node++)
+    {
+        for (size_t output_node = 0; output_node < vocab; output_node++)
+        {
+            dec_mat[output_node][hidden_node] += -rate * dec_mat[output_node][hidden_node] * total_error[output_node];
+        }
+    }
     
-
-
-    // TODO: adjust vectors
-    return error;
+    for (size_t hidden_node = 0; hidden_node < embed_size; hidden_node++)
+    {
+        for (size_t input_node = 0; input_node < vocab; input_node++)
+        {
+            proj_mat[hidden_node][input_node] += -rate * hidden_errors[hidden_node] * input[input_node]; 
+        }
+    }
+    return loss;
 }
 
+
 void Embedder::serialize(const std::string& filename) {
-    std::ofstream outfile(filename.c_str(), std::ios::binary);
-
-    std::size_t size = classifier_layers.size();
-
-    outfile.write((const char *) &size, sizeof(std::size_t));
-
-    for (size_t i = 0; i < size; i++)
-    {
-        outfile.write((const char *) &classifier_layers[i], sizeof(double));
-    }
-
-    for (size_t layer = 0; layer < size; layer++)
-    {
-        for (size_t node_id = 0; node_id < classifier[layer].size(); node_id++)
-        {    
-            for (size_t downstream = 0; downstream < classifier[layer][node_id].size(); downstream++)
-            {
-                outfile.write((const char *) &classifier[layer][downstream], sizeof(double));
-            }
-        }
-    }
-
-    size = mappings.size();
-
-    outfile.write((const char *) &embed_size, sizeof(double));
-    outfile.write((const char *) &size, sizeof(double));
-
-    for (size_t mapping = 0; mapping < size; mapping++)
-    {
-        for (size_t ind = 0; ind < embed_size; ind++)
-        {
-            outfile.write((const char *) &mappings[mapping][ind], sizeof(double));
-        }
-    }
+    
 }
