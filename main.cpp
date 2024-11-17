@@ -95,7 +95,7 @@ double cos_sim(std::vector<double>& a,std::vector<double>& b ) {
 
 int main() {
     WordMapper word_mapper = WordMapper();
-    Tokenizer tokenizer = Tokenizer("corpuses/short_fellow.txt");
+    Tokenizer tokenizer = Tokenizer("corpuses/The Fellowship Of The Ring.txt");
     std::vector<int> tokenized;
     std::vector<int> frequencies = std::vector<int>();
     std::vector<std::vector<int>> neighbors;
@@ -140,13 +140,13 @@ int main() {
     //     std::cout << frequencies[i] << " \t " << word_mapper.get_word(i) << std::endl;
     // }
 
-    Embedder embedder(50, word_mapper.size());
+    Embedder embedder(150, word_mapper.size());
 
     
     int vocab = word_mapper.size();
 
 
-    for (size_t epoch = 0; epoch < 10; epoch++)
+    for (size_t epoch = 0; epoch < 100; epoch++)
     {
         std::cout << "Epoch " << epoch << std::endl;
         double total_loss = 0;
@@ -173,8 +173,10 @@ int main() {
         }
         std::cout << std::endl;
         std::cout << "Average loss: " << total_loss / (tokenized.size()-2*CONTEXT_LENGTH) << std::endl;
+        embedder.serialize("long_run" + std::to_string(epoch) + ".json", word_mapper);
     }
     
+
     while (true) {
         std::string word_1;
         std::cin >> word_1;

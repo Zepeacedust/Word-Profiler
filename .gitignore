@@ -3,3 +3,4 @@
 .vscode
 corpuses
 python
+*.json

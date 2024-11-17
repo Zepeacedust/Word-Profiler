@@ -1,7 +1,8 @@
+#pragma once
 #include <vector>
 #include <string>
 #include <eigen3/Eigen/Eigen>
-
+#include "wordmapper.h"
 
 using std::vector;
 
@@ -18,6 +19,6 @@ public:
     Eigen::VectorXd predict(Eigen::VectorXd input);
     double train(Eigen::VectorXd input, Eigen::VectorXd expected, double rate);
     void batch();
-    void serialize(const std::string& filename);
+    void serialize(const std::string& filename,  WordMapper & mapper);
 
 };

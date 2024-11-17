@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include "wordmapper.h"
+
 using std::vector;
 
 double sig(double x) {
@@ -114,6 +116,21 @@ double Embedder::train(Eigen::VectorXd input, Eigen::VectorXd expected, double r
 }
 
 
-void Embedder::serialize(const std::string& filename) {
-    
+void Embedder::serialize(const std::string& filename, WordMapper &mapper) {
+    std::ofstream outfile(filename.c_str(), std::ios::binary);
+
+    outfile << "{" << std::endl;
+    for (size_t word = 0; word < vocab; word++)
+    {
+        outfile << '"' << mapper.get_word(word) << '"' << " : [";
+        for (size_t embed_ind = 0; embed_ind < embed_size; embed_ind++)
+        {
+            if (embed_ind != 0) outfile << ",";
+            outfile << proj_mat.coeff(embed_ind, word);
+        }
+        outfile << "], \n";
+    }
+    outfile << "}" << std::endl;
+
+    outfile.close();
 }

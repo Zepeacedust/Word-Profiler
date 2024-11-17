@@ -1,5 +1,4 @@
 #include "wordmapper.h"
-
 int WordMapper::size() {
     return _size;
 }
